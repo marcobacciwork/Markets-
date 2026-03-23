@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MARKETPULSE — Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080b12;
+      --surface: #0e1420;
+      --surface2: #131929;
+      --border: #1c2538;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.12);
+      --text: #f0f4ff;
+      --text-muted: #4a5878;
+      --text-dim: #8898bb;
+      --sidebar-w: 220px;
+      --cat-equity: #3b82f6;
+      --cat-crypto: #a78bfa;
+      --cat-forex: #34d399;
+      --cat-commodity: #f59e0b;
+      --cat-bond: #fb7185;
+      --cat-global: #22d3ee;
+      --cat-fav: #fbbf24;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; }
+    body { background:var(--bg); color:var(--text); font-family:'Space Grotesk',sans-serif; display:flex; flex-direction:column; overflow-x:hidden; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position:fixed; top:0; left:0; right:0; height:52px; z-index:100;
+      background:rgba(8,11,18,0.92); backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 20px 0 calc(var(--sidebar-w) + 20px);
+    }
+    .logo { font-size:17px; font-weight:700; letter-spacing:-0.3px; }
+    .logo span { color:var(--accent); }
+    .topbar-right { display:flex; align-items:center; gap:16px; }
+    .live-badge {
+      display:flex; align-items:center; gap:6px;
+      font-family:'JetBrains Mono',monospace; font-size:9px;
+      color:var(--accent); letter-spacing:2px;
+      background:var(--accent-glow); border:1px solid rgba(59,130,246,0.25);
+      padding:4px 10px; border-radius:3px;
+    }
+    .live-dot { width:5px; height:5px; background:var(--accent); border-radius:50%; animation:blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .clock { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted); }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position:fixed; top:52px; left:0; bottom:0; width:var(--sidebar-w);
+      background:var(--surface); border-right:1px solid var(--border);
+      overflow-y:auto; z-index:90; padding:12px 0 24px;
+    }
+    .sidebar::-webkit-scrollbar { width:3px; }
+    .sidebar::-webkit-scrollbar-track { background:transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    .nav-section { margin-bottom:4px; }
+    .nav-section-label {
+      font-family:'JetBrains Mono',monospace; font-size:9px;
+      color:var(--text-muted); letter-spacing:2px; text-transform:uppercase;
+      padding:8px 16px 4px;
+    }
+    .nav-item {
+      display:flex; align-items:center; gap:9px;
+      padding:8px 16px; cursor:pointer;
+      font-size:13px; font-weight:500; color:var(--text-dim);
+      transition:all 0.15s; border-left:2px solid transparent;
+      user-select:none;
+    }
+    .nav-item:hover { color:var(--text); background:rgba(255,255,255,0.03); }
+    .nav-item.active { color:var(--text); border-left-color:var(--item-color,var(--accent)); background:rgba(255,255,255,0.04); }
+    .nav-dot { width:6px; height:6px; border-radius:50%; background:var(--item-color,var(--accent)); flex-shrink:0; }
+    .nav-count { margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); }
+
+    .sub-item {
+      display:flex; align-items:center; gap:9px;
+      padding:6px 16px 6px 32px; cursor:pointer;
+      font-size:12px; color:var(--text-muted);
+      transition:all 0.15s; border-left:2px solid transparent;
+      user-select:none;
+    }
+    .sub-item:hover { color:var(--text-dim); background:rgba(255,255,255,0.02); }
+    .sub-item.active { color:var(--text); border-left-color:var(--item-color,var(--accent)); }
+
+    .nav-divider { height:1px; background:var(--border); margin:8px 12px; }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      margin-top:52px; margin-left:var(--sidebar-w);
+      flex:1; padding:24px;
+      min-height:calc(100vh - 52px);
+    }
+
+    /* Ticker */
+    .ticker-wrap { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:24px; }
+
+    /* Section header */
+    .section-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .section-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .section-title { font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); }
+    .section-line { flex:1; height:1px; background:var(--border); }
+    .section-sub { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); letter-spacing:1px; }
+
+    /* Panels */
+    .panel { display:none; }
+    .panel.active { display:block; animation:fadeIn 0.18s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Grids */
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:14px; }
+    .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:14px; }
+
+    /* Card */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; transition:border-color 0.2s,box-shadow 0.2s; position:relative; }
+    .card:hover { border-color:#2a3a58; box-shadow:0 4px 20px rgba(0,0,0,0.35); }
+    .card-top { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid var(--border); }
+    .card-info { flex:1; }
+    .card-name { font-size:13px; font-weight:600; color:var(--text); }
+    .card-ticker { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); margin-top:1px; }
+    .card-actions { display:flex; align-items:center; gap:8px; }
+
+    /* Star button */
+    .star-btn {
+      background:none; border:none; cursor:pointer;
+      font-size:14px; color:var(--text-muted); transition:all 0.15s;
+      padding:2px; line-height:1;
+    }
+    .star-btn:hover { color:var(--cat-fav); transform:scale(1.15); }
+    .star-btn.starred { color:var(--cat-fav); }
+
+    .badge { font-family:'JetBrains Mono',monospace; font-size:9px; padding:3px 7px; border-radius:3px; letter-spacing:1px; text-transform:uppercase; }
+    .badge-equity    { background:rgba(59,130,246,0.12);  color:var(--cat-equity); }
+    .badge-crypto    { background:rgba(167,139,250,0.12); color:var(--cat-crypto); }
+    .badge-forex     { background:rgba(52,211,153,0.12);  color:var(--cat-forex); }
+    .badge-commodity { background:rgba(245,158,11,0.12);  color:var(--cat-commodity); }
+    .badge-bond      { background:rgba(251,113,133,0.12); color:var(--cat-bond); }
+    .badge-global    { background:rgba(34,211,238,0.12);  color:var(--cat-global); }
+
+    /* Empty favorites */
+    .empty-state {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:12px; padding:80px 20px; color:var(--text-muted); text-align:center;
+    }
+    .empty-icon { font-size:40px; opacity:0.4; }
+    .empty-title { font-size:15px; font-weight:600; color:var(--text-dim); }
+    .empty-sub { font-size:12px; line-height:1.6; max-width:280px; }
+
+    /* Footer */
+    footer { margin-left:var(--sidebar-w); padding:20px 24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+    footer p { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); }
+    footer a { color:var(--accent); text-decoration:none; }
+
+    /* Mobile */
+    @media(max-width:900px){
+      :root { --sidebar-w: 0px; }
+      .sidebar { display:none; }
+      .topbar { padding:0 16px; }
+      .main { padding:16px; }
+      .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+      footer { margin-left:0; }
+    }
+    @media(max-width:1200px){ .grid-4 { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:1000px){ .grid-3 { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">MARKET<span>PULSE</span></div>
+  <div class="topbar-right">
+    <div class="clock" id="clock">—</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="nav-section">
+    <div class="nav-item active" style="--item-color:var(--cat-fav)" onclick="showPanel('fav',this)">
+      <span style="font-size:13px;">⭐</span> Preferiti
+      <span class="nav-count" id="fav-count">0</span>
+    </div>
+  </div>
+
+  <div class="nav-divider"></div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Mercati</div>
+    <div class="nav-item" style="--item-color:var(--cat-equity)" onclick="showPanel('equity',this)">
+      <div class="nav-dot" style="background:var(--cat-equity)"></div> Azioni
+    </div>
+    <div class="sub-item" style="--item-color:var(--cat-equity)" onclick="showPanel('equity-usa',this)">🇺🇸 USA</div>
+    <div class="sub-item" style="--item-color:var(--cat-equity)" onclick="showPanel('equity-eu',this)">🇪🇺 Europa</div>
+    <div class="sub-item" style="--item-color:var(--cat-equity)" onclick="showPanel('equity-asia',this)">🌏 Asia</div>
+
+    <div class="nav-item" style="--item-color:var(--cat-crypto)" onclick="showPanel('crypto',this)">
+      <div class="nav-dot" style="background:var(--cat-crypto)"></div> Crypto
+    </div>
+
+    <div class="nav-item" style="--item-color:var(--cat-forex)" onclick="showPanel('forex',this)">
+      <div class="nav-dot" style="background:var(--cat-forex)"></div> Forex
+    </div>
+
+    <div class="nav-item" style="--item-color:var(--cat-commodity)" onclick="showPanel('commodity',this)">
+      <div class="nav-dot" style="background:var(--cat-commodity)"></div> Commodities
+    </div>
+    <div class="sub-item" style="--item-color:var(--cat-commodity)" onclick="showPanel('commodity-metalli',this)">🥇 Metalli</div>
+    <div class="sub-item" style="--item-color:var(--cat-commodity)" onclick="showPanel('commodity-energia',this)">⚡ Energia</div>
+
+    <div class="nav-item" style="--item-color:var(--cat-bond)" onclick="showPanel('bond',this)">
+      <div class="nav-dot" style="background:var(--cat-bond)"></div> Bond
+    </div>
+
+    <div class="nav-item" style="--item-color:var(--cat-global)" onclick="showPanel('global',this)">
+      <div class="nav-dot" style="background:var(--cat-global)"></div> Indici Globali
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Ticker -->
+  <div class="ticker-wrap">
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      {"symbols":[
+        {"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},
+        {"proName":"FOREXCOM:NSXUSD","title":"Nasdaq"},
+        {"proName":"INDEX:DEU40","title":"DAX"},
+        {"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"},
+        {"proName":"BITSTAMP:ETHUSD","title":"Ethereum"},
+        {"proName":"TVC:GOLD","title":"Oro"},
+        {"proName":"TVC:SILVER","title":"Argento"},
+        {"proName":"TVC:USOIL","title":"WTI"},
+        {"proName":"FX:EURUSD","title":"EUR/USD"},
+        {"proName":"TVC:US10Y","title":"US 10Y"}
+      ],"showSymbolLogo":false,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"it"}
+      </script>
+    </div>
+  </div>
+
+  <!-- ══ PREFERITI ══ -->
+  <div class="panel active" id="panel-fav">
+    <div class="section-header">
+      <span style="font-size:16px;">⭐</span>
+      <div class="section-title">I tuoi preferiti</div>
+      <div class="section-line"></div>
+    </div>
+    <div id="fav-grid" class="grid-3"></div>
+    <div id="fav-empty" class="empty-state">
+      <div class="empty-icon">⭐</div>
+      <div class="empty-title">Nessun preferito ancora</div>
+      <div class="empty-sub">Clicca la stella ⭐ su qualsiasi grafico per aggiungerlo qui. I tuoi preferiti vengono salvati automaticamente.</div>
+    </div>
+  </div>
+
+  <!-- ══ AZIONI (tutti) ══ -->
+  <div class="panel" id="panel-equity">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-equity)"></div><div class="section-title">Azioni</div><div class="section-line"></div></div>
+    <div class="section-header" style="margin-top:8px;"><span style="font-size:12px;">🇺🇸</span><div class="section-sub">USA</div><div class="section-line"></div></div>
+    <div class="grid-3" id="equity-usa-cards"></div>
+    <div class="section-header"><span style="font-size:12px;">🇪🇺</span><div class="section-sub">EUROPA</div><div class="section-line"></div></div>
+    <div class="grid-3" id="equity-eu-cards"></div>
+    <div class="section-header"><span style="font-size:12px;">🌏</span><div class="section-sub">ASIA</div><div class="section-line"></div></div>
+    <div class="grid-2" id="equity-asia-cards"></div>
+  </div>
+
+  <!-- ══ AZIONI USA ══ -->
+  <div class="panel" id="panel-equity-usa">
+    <div class="section-header"><span>🇺🇸</span><div class="section-title">Azioni USA</div><div class="section-line"></div></div>
+    <div class="grid-3" id="equity-usa-cards-sub"></div>
+  </div>
+
+  <!-- ══ AZIONI EUROPA ══ -->
+  <div class="panel" id="panel-equity-eu">
+    <div class="section-header"><span>🇪🇺</span><div class="section-title">Azioni Europa</div><div class="section-line"></div></div>
+    <div class="grid-3" id="equity-eu-cards-sub"></div>
+  </div>
+
+  <!-- ══ AZIONI ASIA ══ -->
+  <div class="panel" id="panel-equity-asia">
+    <div class="section-header"><span>🌏</span><div class="section-title">Azioni Asia</div><div class="section-line"></div></div>
+    <div class="grid-2" id="equity-asia-cards-sub"></div>
+  </div>
+
+  <!-- ══ CRYPTO ══ -->
+  <div class="panel" id="panel-crypto">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-crypto)"></div><div class="section-title">Crypto</div><div class="section-line"></div></div>
+    <div class="grid-3" id="crypto-cards"></div>
+  </div>
+
+  <!-- ══ FOREX ══ -->
+  <div class="panel" id="panel-forex">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-forex)"></div><div class="section-title">Forex</div><div class="section-line"></div></div>
+    <div class="grid-4" id="forex-cards"></div>
+  </div>
+
+  <!-- ══ COMMODITIES (tutti) ══ -->
+  <div class="panel" id="panel-commodity">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-commodity)"></div><div class="section-title">Commodities</div><div class="section-line"></div></div>
+    <div class="section-header" style="margin-top:8px;"><span style="font-size:12px;">🥇</span><div class="section-sub">METALLI</div><div class="section-line"></div></div>
+    <div class="grid-3" id="commodity-metalli-cards"></div>
+    <div class="section-header"><span style="font-size:12px;">⚡</span><div class="section-sub">ENERGIA</div><div class="section-line"></div></div>
+    <div class="grid-3" id="commodity-energia-cards"></div>
+  </div>
+
+  <!-- ══ METALLI ══ -->
+  <div class="panel" id="panel-commodity-metalli">
+    <div class="section-header"><span>🥇</span><div class="section-title">Metalli</div><div class="section-line"></div></div>
+    <div class="grid-3" id="commodity-metalli-cards-sub"></div>
+  </div>
+
+  <!-- ══ ENERGIA ══ -->
+  <div class="panel" id="panel-commodity-energia">
+    <div class="section-header"><span>⚡</span><div class="section-title">Energia</div><div class="section-line"></div></div>
+    <div class="grid-3" id="commodity-energia-cards-sub"></div>
+  </div>
+
+  <!-- ══ BOND ══ -->
+  <div class="panel" id="panel-bond">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-bond)"></div><div class="section-title">Obbligazioni</div><div class="section-line"></div></div>
+    <div class="grid-3" id="bond-cards"></div>
+  </div>
+
+  <!-- ══ GLOBAL ══ -->
+  <div class="panel" id="panel-global">
+    <div class="section-header"><div class="section-dot" style="background:var(--cat-global)"></div><div class="section-title">Indici Globali</div><div class="section-line"></div></div>
+    <div class="grid-3" id="global-cards"></div>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2025 MARKETPULSE — dati real-time via <a href="https://tradingview.com" target="_blank">TradingView</a></p>
+  <p>NON È CONSULENZA FINANZIARIA</p>
+</footer>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const INSTRUMENTS = {
+  'equity-usa': [
+    {id:'sp500',   name:'S&P 500',   ticker:'FOREXCOM:SPXUSD', cat:'equity', label:'Equity', color:'#3b82f6', h:280},
+    {id:'nasdaq',  name:'Nasdaq 100',ticker:'FOREXCOM:NSXUSD', cat:'equity', label:'Equity', color:'#3b82f6', h:280},
+    {id:'dji',     name:'Dow Jones', ticker:'FOREXCOM:DJI',    cat:'equity', label:'Equity', color:'#3b82f6', h:280},
+  ],
+  'equity-eu': [
+    {id:'dax',     name:'DAX',         ticker:'INDEX:DEU40',       cat:'equity', label:'Equity', color:'#3b82f6', h:260},
+    {id:'cac',     name:'CAC 40',       ticker:'EURONEXT:CAC40',    cat:'equity', label:'Equity', color:'#3b82f6', h:260},
+    {id:'stoxx',   name:'EuroStoxx 50', ticker:'EURONEXT:STOXX50E', cat:'equity', label:'Equity', color:'#3b82f6', h:260},
+  ],
+  'equity-asia': [
+    {id:'nikkei',  name:'Nikkei 225',   ticker:'TVC:NI225',    cat:'equity', label:'Equity', color:'#3b82f6', h:260},
+    {id:'hangseng',name:'Hang Seng',     ticker:'TVC:HSI',      cat:'equity', label:'Equity', color:'#3b82f6', h:260},
+  ],
+  'crypto': [
+    {id:'btc',  name:'Bitcoin',  ticker:'BITSTAMP:BTCUSD', cat:'crypto', label:'Crypto', color:'#a78bfa', h:280},
+    {id:'eth',  name:'Ethereum', ticker:'BITSTAMP:ETHUSD', cat:'crypto', label:'Crypto', color:'#a78bfa', h:280},
+    {id:'sol',  name:'Solana',   ticker:'BINANCE:SOLUSDT', cat:'crypto', label:'Crypto', color:'#a78bfa', h:280},
+  ],
+  'forex': [
+    {id:'eurusd', name:'EUR / USD', ticker:'FX:EURUSD', cat:'forex', label:'Forex', color:'#34d399', h:240},
+    {id:'gbpusd', name:'GBP / USD', ticker:'FX:GBPUSD', cat:'forex', label:'Forex', color:'#34d399', h:240},
+    {id:'usdjpy', name:'USD / JPY', ticker:'FX:USDJPY', cat:'forex', label:'Forex', color:'#34d399', h:240},
+    {id:'usdchf', name:'USD / CHF', ticker:'FX:USDCHF', cat:'forex', label:'Forex', color:'#34d399', h:240},
+    {id:'dxy',    name:'US Dollar Index', ticker:'TVC:DXY', cat:'forex', label:'Forex', color:'#34d399', h:240},
+    {id:'usdcad', name:'USD / CAD', ticker:'FX:USDCAD', cat:'forex', label:'Forex', color:'#34d399', h:240},
+  ],
+  'commodity-metalli': [
+    {id:'gold',    name:'Oro',     ticker:'TVC:GOLD',   cat:'commodity', label:'Metal', color:'#f59e0b', h:260},
+    {id:'silver',  name:'Argento', ticker:'TVC:SILVER', cat:'commodity', label:'Metal', color:'#f59e0b', h:260},
+    {id:'copper',  name:'Rame',    ticker:'TVC:COPPER', cat:'commodity', label:'Metal', color:'#f59e0b', h:260},
+  ],
+  'commodity-energia': [
+    {id:'wti',     name:'Petrolio WTI',   ticker:'TVC:USOIL',    cat:'commodity', label:'Energy', color:'#f59e0b', h:260},
+    {id:'brent',   name:'Petrolio Brent', ticker:'TVC:UKOIL',    cat:'commodity', label:'Energy', color:'#f59e0b', h:260},
+    {id:'natgas',  name:'Gas Naturale',   ticker:'TVC:NATURALGAS',cat:'commodity', label:'Energy', color:'#f59e0b', h:260},
+  ],
+  'bond': [
+    {id:'us10y', name:'US 10Y Treasury', ticker:'TVC:US10Y', cat:'bond', label:'Bond', color:'#fb7185', h:260},
+    {id:'us02y', name:'US 2Y Treasury',  ticker:'TVC:US02Y', cat:'bond', label:'Bond', color:'#fb7185', h:260},
+    {id:'btp',   name:'BTP Italia 10Y',  ticker:'TVC:IT10Y', cat:'bond', label:'Bond', color:'#fb7185', h:260},
+  ],
+  'global': [
+    {id:'msciw',  name:'MSCI World',           ticker:'TVC:MXWD',  cat:'global', label:'Global', color:'#22d3ee', h:260},
+    {id:'msciem', name:'MSCI Emerging Markets', ticker:'TVC:MXEF',  cat:'global', label:'Global', color:'#22d3ee', h:260},
+    {id:'vix',    name:'VIX (Volatilità)',      ticker:'TVC:VIX',   cat:'global', label:'Global', color:'#22d3ee', h:260},
+  ],
+};
+
+// ── FAVORITES ────────────────────────────────────────
+let favorites = JSON.parse(localStorage.getItem('mp_favorites') || '[]');
+
+function saveFavorites() {
+  localStorage.setItem('mp_favorites', JSON.stringify(favorites));
+  document.getElementById('fav-count').textContent = favorites.length || '';
+}
+
+function toggleFavorite(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(f => f !== id);
+  } else {
+    favorites.push(id);
+  }
+  saveFavorites();
+  // Update all star buttons for this id
+  document.querySelectorAll(`.star-btn[data-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle('starred', favorites.includes(id));
+    btn.title = favorites.includes(id) ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti';
+  });
+  // Refresh favorites panel if visible
+  if (document.getElementById('panel-fav').classList.contains('active')) {
+    renderFavorites();
+  }
+}
+
+// ── CHART CARD ────────────────────────────────────────
+function makeCard(inst, height) {
+  const h = height || inst.h || 260;
+  const isStarred = favorites.includes(inst.id);
+  const badgeClass = 'badge-' + inst.cat;
+  return `
+    <div class="card" id="card-${inst.id}">
+      <div class="card-top">
+        <div class="card-info">
+          <div class="card-name">${inst.name}</div>
+          <div class="card-ticker">${inst.ticker} · 1D</div>
+        </div>
+        <div class="card-actions">
+          <button class="star-btn ${isStarred ? 'starred' : ''}" data-id="${inst.id}"
+            onclick="toggleFavorite('${inst.id}')"
+            title="${isStarred ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}">
+            ${isStarred ? '⭐' : '☆'}
+          </button>
+          <span class="badge ${badgeClass}">${inst.label}</span>
+        </div>
+      </div>
+      <div class="tradingview-widget-container">
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":${h},"symbol":"${inst.ticker}","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"${inst.color}","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        <\/script>
+      </div>
+    </div>`;
+}
+
+// ── RENDER HELPERS ────────────────────────────────────
+function renderGroup(containerId, groupKey) {
+  const el = document.getElementById(containerId);
+  if (!el || el.dataset.rendered) return;
+  const items = INSTRUMENTS[groupKey] || [];
+  el.innerHTML = items.map(i => makeCard(i)).join('');
+  el.dataset.rendered = '1';
+}
+
+function renderFavorites() {
+  const grid = document.getElementById('fav-grid');
+  const empty = document.getElementById('fav-empty');
+  if (favorites.length === 0) {
+    grid.innerHTML = '';
+    grid.style.display = 'none';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+  // Collect all instruments
+  const all = Object.values(INSTRUMENTS).flat();
+  const favItems = favorites.map(id => all.find(i => i.id === id)).filter(Boolean);
+  grid.innerHTML = favItems.map(i => makeCard(i)).join('');
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function showPanel(name, el) {
+  // Deactivate all
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .sub-item').forEach(n => n.classList.remove('active'));
+
+  // Activate clicked
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+
+  // Render content on demand
+  if (name === 'fav') {
+    renderFavorites();
+  } else if (name === 'equity') {
+    renderGroup('equity-usa-cards', 'equity-usa');
+    renderGroup('equity-eu-cards', 'equity-eu');
+    renderGroup('equity-asia-cards', 'equity-asia');
+  } else if (name === 'equity-usa') {
+    renderGroup('equity-usa-cards-sub', 'equity-usa');
+  } else if (name === 'equity-eu') {
+    renderGroup('equity-eu-cards-sub', 'equity-eu');
+  } else if (name === 'equity-asia') {
+    renderGroup('equity-asia-cards-sub', 'equity-asia');
+  } else if (name === 'crypto') {
+    renderGroup('crypto-cards', 'crypto');
+  } else if (name === 'forex') {
+    renderGroup('forex-cards', 'forex');
+  } else if (name === 'commodity') {
+    renderGroup('commodity-metalli-cards', 'commodity-metalli');
+    renderGroup('commodity-energia-cards', 'commodity-energia');
+  } else if (name === 'commodity-metalli') {
+    renderGroup('commodity-metalli-cards-sub', 'commodity-metalli');
+  } else if (name === 'commodity-energia') {
+    renderGroup('commodity-energia-cards-sub', 'commodity-energia');
+  } else if (name === 'bond') {
+    renderGroup('bond-cards', 'bond');
+  } else if (name === 'global') {
+    renderGroup('global-cards', 'global');
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────
+saveFavorites();
+renderFavorites();
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent =
+    pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+
+    ' '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+}
+updateClock(); setInterval(updateClock, 1000);
+</script>
+</body>
+</html>
