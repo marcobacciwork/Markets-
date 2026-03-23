@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MARKETPULSE — Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080b12;
+      --surface: #0e1420;
+      --border: #1c2538;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.15);
+      --text: #f0f4ff;
+      --text-muted: #4a5878;
+      --text-dim: #8898bb;
+      --cat-equity: #3b82f6;
+      --cat-crypto: #a78bfa;
+      --cat-commodity: #f59e0b;
+      --cat-forex: #34d399;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:'Space Grotesk',sans-serif;
+      min-height:100vh; overflow-x:hidden;
+    }
+    body::before {
+      content:''; position:fixed; top:-200px; left:50%; transform:translateX(-50%);
+      width:800px; height:400px;
+      background:radial-gradient(ellipse,rgba(59,130,246,0.06) 0%,transparent 70%);
+      pointer-events:none; z-index:0;
+    }
+    .wrapper { position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:28px 28px 60px; }
+
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px; }
+    .logo { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+    .logo span { color:var(--accent); }
+    .header-right { display:flex; align-items:center; gap:20px; }
+    .live-badge {
+      display:flex; align-items:center; gap:7px;
+      font-family:'JetBrains Mono',monospace; font-size:10px;
+      color:var(--accent); letter-spacing:2px; text-transform:uppercase;
+      background:var(--accent-glow); border:1px solid rgba(59,130,246,0.3);
+      padding:5px 12px; border-radius:3px;
+    }
+    .live-dot { width:6px; height:6px; background:var(--accent); border-radius:50%; animation:blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .last-update { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted); letter-spacing:1px; }
+
+    .ticker-wrap { background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:32px; }
+
+    .section { margin-bottom:40px; }
+    .section-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .section-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .section-title { font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim); }
+    .section-line { flex:1; height:1px; background:var(--border); }
+
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; transition:border-color 0.25s, box-shadow 0.25s; }
+    .card:hover { border-color:#2a3a58; box-shadow:0 4px 24px rgba(0,0,0,0.4); }
+    .card-top { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-bottom:1px solid var(--border); }
+    .card-name { font-size:14px; font-weight:600; color:var(--text); }
+    .card-ticker { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); margin-top:2px; letter-spacing:0.5px; }
+
+    .badge { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:500; padding:3px 8px; border-radius:3px; letter-spacing:1px; text-transform:uppercase; }
+    .badge-equity   { background:rgba(59,130,246,0.12);  color:var(--cat-equity); }
+    .badge-crypto   { background:rgba(167,139,250,0.12); color:var(--cat-crypto); }
+    .badge-commodity{ background:rgba(245,158,11,0.12);  color:var(--cat-commodity); }
+    .badge-forex    { background:rgba(52,211,153,0.12);  color:var(--cat-forex); }
+
+    footer { margin-top:48px; padding-top:24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    footer p { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted); letter-spacing:0.5px; }
+    footer a { color:var(--accent); text-decoration:none; }
+
+    @media(max-width:1100px){ .grid-4{grid-template-columns:repeat(2,1fr);} }
+    @media(max-width:768px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .wrapper{padding:16px 16px 40px;} }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">MARKET<span>PULSE</span></div>
+    <div class="header-right">
+      <div class="last-update" id="clock">—</div>
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    </div>
+  </header>
+
+  <div class="ticker-wrap">
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      {"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq 100"},{"proName":"FOREXCOM:DJI","title":"Dow Jones"},{"proName":"INDEX:DEU40","title":"DAX"},{"proName":"FTSE:FTSEMIB","title":"FTSE MIB"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"},{"proName":"BITSTAMP:ETHUSD","title":"Ethereum"},{"proName":"BINANCE:SOLUSDT","title":"Solana"},{"proName":"TVC:GOLD","title":"Oro"},{"proName":"TVC:SILVER","title":"Argento"},{"proName":"TVC:USOIL","title":"Petrolio WTI"},{"proName":"FX:EURUSD","title":"EUR/USD"},{"proName":"FX:GBPUSD","title":"GBP/USD"},{"proName":"FX:USDJPY","title":"USD/JPY"}],"showSymbolLogo":false,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"it"}
+      </script>
+    </div>
+  </div>
+
+  <!-- INDICI AZIONARI -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot" style="background:var(--cat-equity)"></div>
+      <div class="section-title">Indici Azionari</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">S&P 500</div><div class="card-ticker">FOREXCOM:SPXUSD · 1D</div></div><span class="badge badge-equity">Equity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":300,"symbol":"FOREXCOM:SPXUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#3b82f6","hide_top_toolbar":false,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Nasdaq 100</div><div class="card-ticker">FOREXCOM:NSXUSD · 1D</div></div><span class="badge badge-equity">Equity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":300,"symbol":"FOREXCOM:NSXUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#3b82f6","hide_top_toolbar":false,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Dow Jones</div><div class="card-ticker">FOREXCOM:DJI · 1D</div></div><span class="badge badge-equity">Equity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":220,"symbol":"FOREXCOM:DJI","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#3b82f6","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">DAX</div><div class="card-ticker">INDEX:DEU40 · 1D</div></div><span class="badge badge-equity">Equity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":220,"symbol":"INDEX:DEU40","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#3b82f6","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">FTSE MIB</div><div class="card-ticker">INDEX:ITA40 · 1D</div></div><span class="badge badge-equity">Equity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":220,"symbol":"FTSE:FTSEMIB","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#3b82f6","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRYPTO -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot" style="background:var(--cat-crypto)"></div>
+      <div class="section-title">Crypto</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Bitcoin</div><div class="card-ticker">BITSTAMP:BTCUSD · 1D</div></div><span class="badge badge-crypto">Crypto</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":260,"symbol":"BITSTAMP:BTCUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#a78bfa","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Ethereum</div><div class="card-ticker">BITSTAMP:ETHUSD · 1D</div></div><span class="badge badge-crypto">Crypto</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":260,"symbol":"BITSTAMP:ETHUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#a78bfa","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Solana</div><div class="card-ticker">BINANCE:SOLUSDT · 1D</div></div><span class="badge badge-crypto">Crypto</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":260,"symbol":"BINANCE:SOLUSDT","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#a78bfa","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMMODITIES -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot" style="background:var(--cat-commodity)"></div>
+      <div class="section-title">Commodities</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Oro</div><div class="card-ticker">TVC:GOLD · 1D</div></div><span class="badge badge-commodity">Commodity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":240,"symbol":"TVC:GOLD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#f59e0b","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Argento</div><div class="card-ticker">TVC:SILVER · 1D</div></div><span class="badge badge-commodity">Commodity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":240,"symbol":"TVC:SILVER","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#f59e0b","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">Petrolio WTI</div><div class="card-ticker">TVC:USOIL · 1D</div></div><span class="badge badge-commodity">Commodity</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":240,"symbol":"TVC:USOIL","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#f59e0b","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOREX -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot" style="background:var(--cat-forex)"></div>
+      <div class="section-title">Forex</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">EUR / USD</div><div class="card-ticker">FX:EURUSD · 1D</div></div><span class="badge badge-forex">Forex</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":200,"symbol":"FX:EURUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#34d399","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">GBP / USD</div><div class="card-ticker">FX:GBPUSD · 1D</div></div><span class="badge badge-forex">Forex</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":200,"symbol":"FX:GBPUSD","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#34d399","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">USD / JPY</div><div class="card-ticker">FX:USDJPY · 1D</div></div><span class="badge badge-forex">Forex</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":200,"symbol":"FX:USDJPY","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#34d399","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><div><div class="card-name">USD / CHF</div><div class="card-ticker">FX:USDCHF · 1D</div></div><span class="badge badge-forex">Forex</span></div>
+        <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {"width":"100%","height":200,"symbol":"FX:USDCHF","interval":"D","timezone":"Europe/Rome","theme":"dark","style":"3","locale":"it","backgroundColor":"rgba(14,20,32,1)","lineColor":"#34d399","hide_top_toolbar":true,"hide_legend":true,"save_image":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}
+        </script></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 MARKETPULSE — dati real-time via <a href="https://tradingview.com" target="_blank">TradingView</a></p>
+    <p style="color:#2a3a58;">NON È CONSULENZA FINANZIARIA — solo scopo informativo</p>
+  </footer>
+
+</div>
+<script>
+  function updateClock() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('clock').textContent =
+      pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+
+      ' '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  }
+  updateClock(); setInterval(updateClock,1000);
+</script>
+</body>
+</html>
