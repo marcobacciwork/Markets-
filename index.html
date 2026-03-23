@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MARKETPULSE — Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#080b12; --surface:#0e1420; --border:#1c2538;
+      --accent:#3b82f6; --ag:rgba(59,130,246,0.12);
+      --text:#f0f4ff; --tm:#4a5878; --td:#8898bb;
+      --sw:230px;
+      --ce:#3b82f6; --cc:#a78bfa; --cf:#34d399;
+      --co:#f59e0b; --cb:#fb7185; --cg:#22d3ee; --cv:#fbbf24;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;}
+    body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;display:flex;flex-direction:column;overflow-x:hidden;}
+
+    .topbar{position:fixed;top:0;left:0;right:0;height:52px;z-index:100;background:rgba(8,11,18,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 calc(var(--sw) + 20px);}
+    .logo{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+    .logo span{color:var(--accent);}
+    .tr{display:flex;align-items:center;gap:16px;}
+    .lb{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:2px;background:var(--ag);border:1px solid rgba(59,130,246,.25);padding:4px 10px;border-radius:3px;}
+    .ld{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:bl 1.4s infinite;}
+    @keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
+    .ck{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm);}
+
+    .sidebar{position:fixed;top:52px;left:0;bottom:0;width:var(--sw);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:90;padding:12px 0 40px;}
+    .sidebar::-webkit-scrollbar{width:3px;}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .nl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tm);letter-spacing:2px;text-transform:uppercase;padding:10px 16px 4px;}
+    .ni{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--td);transition:all .15s;border-left:2px solid transparent;user-select:none;}
+    .ni:hover{color:var(--text);background:rgba(255,255,255,.03);}
+    .ni.active{color:var(--text);border-left-color:var(--ic,var(--accent));background:rgba(255,255,255,.04);}
+    .nd{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+    .fc{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;background:rgba(251,191,36,.15);color:var(--cv);padding:1px 6px;border-radius:10px;display:none;}
+    .si{display:flex;align-items:center;gap:8px;padding:6px 16px 6px 34px;cursor:pointer;font-size:12px;color:var(--tm);transition:all .15s;border-left:2px solid transparent;user-select:none;}
+    .si:hover{color:var(--td);background:rgba(255,255,255,.02);}
+    .si.active{color:var(--text);border-left-color:var(--ic);}
+    .dv{height:1px;background:var(--border);margin:8px 12px;}
+
+    .main{margin-top:52px;margin-left:var(--sw);flex:1;padding:20px 24px 40px;}
+
+    .tw{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:22px;}
+
+    .sh{display:flex;align-items:center;gap:10px;margin-bottom:14px;margin-top:22px;}
+    .sh:first-child{margin-top:0;}
+    .sd{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .st{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--td);}
+    .ss{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:1px;}
+    .sl{flex:1;height:1px;background:var(--border);}
+
+    .panel{display:none;}
+    .panel.active{display:block;animation:fi .18s ease;}
+    @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+    .card:hover{border-color:#253050;box-shadow:0 4px 20px rgba(0,0,0,.35);}
+    .ct{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
+    .cn{font-size:13px;font-weight:600;color:var(--text);}
+    .ck2{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tm);margin-top:2px;}
+    .ca{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .sb{background:none;border:none;cursor:pointer;font-size:15px;color:var(--tm);transition:all .15s;padding:1px;line-height:1;}
+    .sb:hover{color:var(--cv);transform:scale(1.2);}
+    .sb.starred{color:var(--cv);}
+    .bg{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;}
+    .be{background:rgba(59,130,246,.12);color:var(--ce);}
+    .bc{background:rgba(167,139,250,.12);color:var(--cc);}
+    .bf{background:rgba(52,211,153,.12);color:var(--cf);}
+    .bo{background:rgba(245,158,11,.12);color:var(--co);}
+    .bb{background:rgba(251,113,133,.12);color:var(--cb);}
+    .bg2{background:rgba(34,211,238,.12);color:var(--cg);}
+
+    iframe.cf{width:100%;border:none;display:block;}
+
+    .es{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:80px 20px;color:var(--tm);text-align:center;}
+    .ei{font-size:40px;opacity:.4;}
+    .et{font-size:15px;font-weight:600;color:var(--td);}
+    .eb{font-size:12px;line-height:1.6;max-width:280px;}
+
+    footer{margin-left:var(--sw);padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+    footer p{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tm);}
+    footer a{color:var(--accent);text-decoration:none;}
+
+    @media(max-width:900px){:root{--sw:0px;}.sidebar{display:none;}.topbar{padding:0 16px;}.main{padding:14px;}.g2,.g3,.g4{grid-template-columns:1fr;}footer{margin-left:0;}}
+    @media(max-width:1200px){.g4{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:1050px){.g3{grid-template-columns:repeat(2,1fr);}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">MARKET<span>PULSE</span></div>
+  <div class="tr">
+    <div class="ck" id="clock">—</div>
+    <div class="lb"><div class="ld"></div>LIVE</div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="ni active" style="--ic:var(--cv)" onclick="showPanel('fav',this)">
+    <span>⭐</span> Preferiti <span class="fc" id="fav-cnt"></span>
+  </div>
+  <div class="dv"></div>
+  <div class="nl">Mercati</div>
+
+  <div class="ni" style="--ic:var(--ce)" onclick="showPanel('equity',this)"><div class="nd" style="background:var(--ce)"></div>Azioni</div>
+  <div class="si" style="--ic:var(--ce)" onclick="showPanel('eq-usa',this)">🇺🇸 USA</div>
+  <div class="si" style="--ic:var(--ce)" onclick="showPanel('eq-eu',this)">🇪🇺 Europa</div>
+  <div class="si" style="--ic:var(--ce)" onclick="showPanel('eq-asia',this)">🌏 Asia</div>
+
+  <div class="ni" style="--ic:var(--cc)" onclick="showPanel('crypto',this)"><div class="nd" style="background:var(--cc)"></div>Crypto</div>
+  <div class="si" style="--ic:var(--cc)" onclick="showPanel('crypto-top',this)">🔵 Top Crypto</div>
+  <div class="si" style="--ic:var(--cc)" onclick="showPanel('crypto-alt',this)">🟣 Altcoin</div>
+
+  <div class="ni" style="--ic:var(--cf)" onclick="showPanel('forex',this)"><div class="nd" style="background:var(--cf)"></div>Forex</div>
+
+  <div class="ni" style="--ic:var(--co)" onclick="showPanel('commodity',this)"><div class="nd" style="background:var(--co)"></div>Commodities</div>
+  <div class="si" style="--ic:var(--co)" onclick="showPanel('com-metalli',this)">🥇 Metalli</div>
+  <div class="si" style="--ic:var(--co)" onclick="showPanel('com-energia',this)">🛢️ Energia</div>
+  <div class="si" style="--ic:var(--co)" onclick="showPanel('com-agri',this)">🌾 Agricoli</div>
+
+  <div class="ni" style="--ic:var(--cb)" onclick="showPanel('bond',this)"><div class="nd" style="background:var(--cb)"></div>Bond</div>
+  <div class="ni" style="--ic:var(--cg)" onclick="showPanel('global',this)"><div class="nd" style="background:var(--cg)"></div>Indici Globali</div>
+</div>
+
+<div class="main">
+  <div class="tw">
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+      {"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq"},{"proName":"FOREXCOM:DJI","title":"Dow Jones"},{"proName":"INDEX:DEU40","title":"DAX"},{"proName":"EURONEXT:CAC40","title":"CAC 40"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"},{"proName":"BITSTAMP:ETHUSD","title":"Ethereum"},{"proName":"TVC:GOLD","title":"Oro"},{"proName":"TVC:SILVER","title":"Argento"},{"proName":"TVC:USOIL","title":"WTI"},{"proName":"FX:EURUSD","title":"EUR/USD"},{"proName":"TVC:US10Y","title":"US 10Y"},{"proName":"TVC:VIX","title":"VIX"}],"showSymbolLogo":false,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"it"}
+      </script>
+    </div>
+  </div>
+
+  <div class="panel active" id="panel-fav">
+    <div class="sh"><span style="font-size:15px">⭐</span><div class="st">I tuoi preferiti</div><div class="sl"></div></div>
+    <div id="fav-grid" class="g3" style="display:none"></div>
+    <div id="fav-empty" class="es"><div class="ei">⭐</div><div class="et">Nessun preferito ancora</div><div class="eb">Clicca ☆ su qualsiasi grafico per salvarlo qui. Vengono ricordati anche alla prossima visita.</div></div>
+  </div>
+
+  <div class="panel" id="panel-equity">
+    <div class="sh"><div class="sd" style="background:var(--ce)"></div><div class="st">Azioni</div><div class="sl"></div></div>
+    <div class="sh"><span>🇺🇸</span><div class="ss">USA</div><div class="sl"></div></div><div class="g3" id="c-eq-usa"></div>
+    <div class="sh"><span>🇪🇺</span><div class="ss">EUROPA</div><div class="sl"></div></div><div class="g3" id="c-eq-eu"></div>
+    <div class="sh"><span>🌏</span><div class="ss">ASIA</div><div class="sl"></div></div><div class="g3" id="c-eq-asia"></div>
+  </div>
+  <div class="panel" id="panel-eq-usa"><div class="sh"><span>🇺🇸</span><div class="st">Azioni USA</div><div class="sl"></div></div><div class="g3" id="c-eq-usa-s"></div></div>
+  <div class="panel" id="panel-eq-eu"><div class="sh"><span>🇪🇺</span><div class="st">Azioni Europa</div><div class="sl"></div></div><div class="g3" id="c-eq-eu-s"></div></div>
+  <div class="panel" id="panel-eq-asia"><div class="sh"><span>🌏</span><div class="st">Azioni Asia</div><div class="sl"></div></div><div class="g3" id="c-eq-asia-s"></div></div>
+
+  <div class="panel" id="panel-crypto">
+    <div class="sh"><div class="sd" style="background:var(--cc)"></div><div class="st">Crypto</div><div class="sl"></div></div>
+    <div class="sh"><span>🔵</span><div class="ss">TOP CRYPTO</div><div class="sl"></div></div><div class="g3" id="c-crypto-top"></div>
+    <div class="sh"><span>🟣</span><div class="ss">ALTCOIN</div><div class="sl"></div></div><div class="g3" id="c-crypto-alt"></div>
+  </div>
+  <div class="panel" id="panel-crypto-top"><div class="sh"><span>🔵</span><div class="st">Top Crypto</div><div class="sl"></div></div><div class="g3" id="c-crypto-top-s"></div></div>
+  <div class="panel" id="panel-crypto-alt"><div class="sh"><span>🟣</span><div class="st">Altcoin</div><div class="sl"></div></div><div class="g3" id="c-crypto-alt-s"></div></div>
+
+  <div class="panel" id="panel-forex"><div class="sh"><div class="sd" style="background:var(--cf)"></div><div class="st">Forex</div><div class="sl"></div></div><div class="g4" id="c-forex"></div></div>
+
+  <div class="panel" id="panel-commodity">
+    <div class="sh"><div class="sd" style="background:var(--co)"></div><div class="st">Commodities</div><div class="sl"></div></div>
+    <div class="sh"><span>🥇</span><div class="ss">METALLI</div><div class="sl"></div></div><div class="g3" id="c-com-metalli"></div>
+    <div class="sh"><span>🛢️</span><div class="ss">ENERGIA</div><div class="sl"></div></div><div class="g3" id="c-com-energia"></div>
+    <div class="sh"><span>🌾</span><div class="ss">AGRICOLI</div><div class="sl"></div></div><div class="g3" id="c-com-agri"></div>
+  </div>
+  <div class="panel" id="panel-com-metalli"><div class="sh"><span>🥇</span><div class="st">Metalli</div><div class="sl"></div></div><div class="g3" id="c-com-metalli-s"></div></div>
+  <div class="panel" id="panel-com-energia"><div class="sh"><span>🛢️</span><div class="st">Energia</div><div class="sl"></div></div><div class="g3" id="c-com-energia-s"></div></div>
+  <div class="panel" id="panel-com-agri"><div class="sh"><span>🌾</span><div class="st">Agricoli</div><div class="sl"></div></div><div class="g3" id="c-com-agri-s"></div></div>
+
+  <div class="panel" id="panel-bond"><div class="sh"><div class="sd" style="background:var(--cb)"></div><div class="st">Obbligazioni</div><div class="sl"></div></div><div class="g3" id="c-bond"></div></div>
+  <div class="panel" id="panel-global"><div class="sh"><div class="sd" style="background:var(--cg)"></div><div class="st">Indici Globali</div><div class="sl"></div></div><div class="g3" id="c-global"></div></div>
+</div>
+
+<footer>
+  <p>© 2025 MARKETPULSE — dati real-time via <a href="https://tradingview.com" target="_blank">TradingView</a></p>
+  <p>NON È CONSULENZA FINANZIARIA</p>
+</footer>
+
+<script>
+const D={
+  'eq-usa':[
+    {id:'sp500',  name:'S&P 500',          ticker:'FOREXCOM:SPXUSD', cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+    {id:'nasdaq', name:'Nasdaq 100',        ticker:'FOREXCOM:NSXUSD', cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+    {id:'dji',    name:'Dow Jones',         ticker:'FOREXCOM:DJI',    cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+    {id:'rut',    name:'Russell 2000',      ticker:'TVC:RUT',         cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+    {id:'spy',    name:'S&P 500 ETF (SPY)', ticker:'AMEX:SPY',        cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+    {id:'qqq',    name:'Nasdaq ETF (QQQ)',  ticker:'NASDAQ:QQQ',      cat:'equity',    lbl:'Equity', col:'#3b82f6'},
+  ],
+  'eq-eu':[
+    {id:'dax',    name:'DAX',               ticker:'INDEX:DEU40',       cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+    {id:'cac',    name:'CAC 40',            ticker:'EURONEXT:CAC40',    cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+    {id:'stoxx',  name:'EuroStoxx 50',      ticker:'EURONEXT:STOXX50E', cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+    {id:'ftse',   name:'FTSE 100',          ticker:'SPREADEX:FTSE',     cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+    {id:'ibex',   name:'IBEX 35',           ticker:'TVC:IBEX35',        cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+    {id:'smi',    name:'SMI (Svizzera)',     ticker:'TVC:SMI',           cat:'equity',  lbl:'Equity', col:'#3b82f6'},
+  ],
+  'eq-asia':[
+    {id:'nikkei',  name:'Nikkei 225',        ticker:'TVC:NI225',   cat:'equity', lbl:'Equity', col:'#3b82f6'},
+    {id:'hsi',     name:'Hang Seng',         ticker:'TVC:HSI',     cat:'equity', lbl:'Equity', col:'#3b82f6'},
+    {id:'csi300',  name:'CSI 300 (Cina)',    ticker:'TVC:CSI300',  cat:'equity', lbl:'Equity', col:'#3b82f6'},
+    {id:'asx200',  name:'ASX 200 (Australia)',ticker:'TVC:ASX200', cat:'equity', lbl:'Equity', col:'#3b82f6'},
+    {id:'kospi',   name:'KOSPI (Corea)',      ticker:'TVC:KOSPI',  cat:'equity', lbl:'Equity', col:'#3b82f6'},
+    {id:'sensex',  name:'Sensex (India)',     ticker:'BSE:SENSEX', cat:'equity', lbl:'Equity', col:'#3b82f6'},
+  ],
+  'crypto-top':[
+    {id:'btc', name:'Bitcoin',  ticker:'BITSTAMP:BTCUSD', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'eth', name:'Ethereum', ticker:'BITSTAMP:ETHUSD', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'sol', name:'Solana',   ticker:'BINANCE:SOLUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'bnb', name:'BNB',      ticker:'BINANCE:BNBUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'xrp', name:'XRP',      ticker:'BITSTAMP:XRPUSD', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'ada', name:'Cardano',  ticker:'BINANCE:ADAUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+  ],
+  'crypto-alt':[
+    {id:'avax', name:'Avalanche', ticker:'BINANCE:AVAXUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'dot',  name:'Polkadot',  ticker:'BINANCE:DOTUSDT',  cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'link', name:'Chainlink', ticker:'BINANCE:LINKUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'doge', name:'Dogecoin',  ticker:'BINANCE:DOGEUSDT', cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'matic',name:'Polygon',   ticker:'BINANCE:MATICUSDT',cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+    {id:'uni',  name:'Uniswap',   ticker:'BINANCE:UNIUSDT',  cat:'crypto', lbl:'Crypto', col:'#a78bfa'},
+  ],
+  'forex':[
+    {id:'eurusd',name:'EUR / USD',       ticker:'FX:EURUSD', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'gbpusd',name:'GBP / USD',       ticker:'FX:GBPUSD', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'usdjpy',name:'USD / JPY',       ticker:'FX:USDJPY', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'usdchf',name:'USD / CHF',       ticker:'FX:USDCHF', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'usdcad',name:'USD / CAD',       ticker:'FX:USDCAD', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'audusd',name:'AUD / USD',       ticker:'FX:AUDUSD', cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'dxy',   name:'US Dollar Index', ticker:'TVC:DXY',   cat:'forex', lbl:'Forex', col:'#34d399'},
+    {id:'eurgbp',name:'EUR / GBP',       ticker:'FX:EURGBP', cat:'forex', lbl:'Forex', col:'#34d399'},
+  ],
+  'com-metalli':[
+    {id:'gold',     name:'Oro',      ticker:'TVC:GOLD',     cat:'commodity', lbl:'Metal', col:'#f59e0b'},
+    {id:'silver',   name:'Argento',  ticker:'TVC:SILVER',   cat:'commodity', lbl:'Metal', col:'#f59e0b'},
+    {id:'copper',   name:'Rame',     ticker:'TVC:COPPER',   cat:'commodity', lbl:'Metal', col:'#f59e0b'},
+    {id:'platinum', name:'Platino',  ticker:'TVC:PLATINUM', cat:'commodity', lbl:'Metal', col:'#f59e0b'},
+    {id:'palladium',name:'Palladio', ticker:'TVC:PALLADIUM',cat:'commodity', lbl:'Metal', col:'#f59e0b'},
+  ],
+  'com-energia':[
+    {id:'wti',   name:'Petrolio WTI',   ticker:'TVC:USOIL',     cat:'commodity', lbl:'Energy', col:'#f59e0b'},
+    {id:'brent', name:'Petrolio Brent', ticker:'TVC:UKOIL',     cat:'commodity', lbl:'Energy', col:'#f59e0b'},
+    {id:'gas',   name:'Gas Naturale',   ticker:'TVC:NATURALGAS',cat:'commodity', lbl:'Energy', col:'#f59e0b'},
+  ],
+  'com-agri':[
+    {id:'wheat', name:'Grano',    ticker:'CBOT:ZW1!',  cat:'commodity', lbl:'Agri', col:'#f59e0b'},
+    {id:'corn',  name:'Mais',     ticker:'CBOT:ZC1!',  cat:'commodity', lbl:'Agri', col:'#f59e0b'},
+    {id:'soy',   name:'Soia',     ticker:'CBOT:ZS1!',  cat:'commodity', lbl:'Agri', col:'#f59e0b'},
+    {id:'coffee',name:'Caffè',    ticker:'NYMEX:KC1!', cat:'commodity', lbl:'Agri', col:'#f59e0b'},
+    {id:'sugar', name:'Zucchero', ticker:'NYMEX:SB1!', cat:'commodity', lbl:'Agri', col:'#f59e0b'},
+  ],
+  'bond':[
+    {id:'us10y',name:'US 10Y Treasury',  ticker:'TVC:US10Y', cat:'bond', lbl:'Bond', col:'#fb7185'},
+    {id:'us02y',name:'US 2Y Treasury',   ticker:'TVC:US02Y', cat:'bond', lbl:'Bond', col:'#fb7185'},
+    {id:'us30y',name:'US 30Y Treasury',  ticker:'TVC:US30Y', cat:'bond', lbl:'Bond', col:'#fb7185'},
+    {id:'it10y',name:'BTP Italia 10Y',   ticker:'TVC:IT10Y', cat:'bond', lbl:'Bond', col:'#fb7185'},
+    {id:'de10y',name:'Bund Germania 10Y',ticker:'TVC:DE10Y', cat:'bond', lbl:'Bond', col:'#fb7185'},
+  ],
+  'global':[
+    {id:'msciw', name:'MSCI World',           ticker:'TVC:MXWD', cat:'global', lbl:'Global', col:'#22d3ee'},
+    {id:'msciem',name:'MSCI Emerging Markets',ticker:'TVC:MXEF', cat:'global', lbl:'Global', col:'#22d3ee'},
+    {id:'vix',   name:'VIX — Volatilità',     ticker:'TVC:VIX',  cat:'global', lbl:'Global', col:'#22d3ee'},
+    {id:'dxy2',  name:'Dollar Index (DXY)',   ticker:'TVC:DXY',  cat:'global', lbl:'Global', col:'#22d3ee'},
+  ],
+};
+
+let favs=JSON.parse(localStorage.getItem('mp_favs3')||'[]');
+
+function saveFavs(){
+  localStorage.setItem('mp_favs3',JSON.stringify(favs));
+  const c=document.getElementById('fav-cnt');
+  c.textContent=favs.length||''; c.style.display=favs.length?'inline':'none';
+}
+
+function toggleFav(id){
+  favs=favs.includes(id)?favs.filter(f=>f!==id):[...favs,id];
+  saveFavs();
+  document.querySelectorAll(`.sb[data-id="${id}"]`).forEach(b=>{
+    b.classList.toggle('starred',favs.includes(id));
+    b.textContent=favs.includes(id)?'⭐':'☆';
+  });
+  if(document.getElementById('panel-fav').classList.contains('active'))renderFavs();
+}
+
+function iframe(ticker,col,h){
+  const cfg=JSON.stringify({symbol:ticker,interval:'D',timezone:'Europe/Rome',theme:'dark',style:'3',locale:'it',backgroundColor:'rgba(14,20,32,1)',lineColor:col,hide_top_toolbar:true,hide_legend:true,save_image:false,hide_volume:true,width:'100%',height:h});
+  const src=`https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.html#${encodeURIComponent(cfg)}`;
+  return `<iframe class="cf" src="${src}" height="${h}" scrolling="no" allowtransparency="true" frameborder="0"></iframe>`;
+}
+
+function card(inst,h){
+  h=h||260;
+  const s=favs.includes(inst.id);
+  const bc={'equity':'be','crypto':'bc','forex':'bf','commodity':'bo','bond':'bb','global':'bg2'}[inst.cat]||'be';
+  return `<div class="card"><div class="ct"><div><div class="cn">${inst.name}</div><div class="ck2">${inst.ticker} · 1D</div></div><div class="ca"><button class="sb ${s?'starred':''}" data-id="${inst.id}" onclick="toggleFav('${inst.id}')">${s?'⭐':'☆'}</button><span class="bg ${bc}">${inst.lbl}</span></div></div>${iframe(inst.ticker,inst.col,h)}</div>`;
+}
+
+function render(elId,key,h){
+  const el=document.getElementById(elId);
+  if(!el||el.dataset.r)return;
+  el.innerHTML=(D[key]||[]).map(i=>card(i,h)).join('');
+  el.dataset.r='1';
+}
+
+function renderFavs(){
+  const g=document.getElementById('fav-grid'),e=document.getElementById('fav-empty');
+  if(!favs.length){g.style.display='none';e.style.display='flex';return;}
+  e.style.display='none';g.style.display='grid';
+  const all=Object.values(D).flat();
+  g.innerHTML=favs.map(id=>all.find(i=>i.id===id)).filter(Boolean).map(i=>card(i,240)).join('');
+}
+
+const MAP={
+  'equity':    [['c-eq-usa','eq-usa'],['c-eq-eu','eq-eu'],['c-eq-asia','eq-asia']],
+  'eq-usa':    [['c-eq-usa-s','eq-usa',280]],
+  'eq-eu':     [['c-eq-eu-s','eq-eu',280]],
+  'eq-asia':   [['c-eq-asia-s','eq-asia',280]],
+  'crypto':    [['c-crypto-top','crypto-top'],['c-crypto-alt','crypto-alt']],
+  'crypto-top':[['c-crypto-top-s','crypto-top',280]],
+  'crypto-alt':[['c-crypto-alt-s','crypto-alt',280]],
+  'forex':     [['c-forex','forex',240]],
+  'commodity': [['c-com-metalli','com-metalli'],['c-com-energia','com-energia'],['c-com-agri','com-agri']],
+  'com-metalli':[['c-com-metalli-s','com-metalli',260]],
+  'com-energia':[['c-com-energia-s','com-energia',260]],
+  'com-agri':  [['c-com-agri-s','com-agri',260]],
+  'bond':      [['c-bond','bond',240]],
+  'global':    [['c-global','global',260]],
+};
+
+function showPanel(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni,.si').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='fav'){renderFavs();return;}
+  (MAP[name]||[]).forEach(([eId,key,h])=>render(eId,key,h||260));
+}
+
+saveFavs();
+function tick(){const n=new Date(),p=x=>String(x).padStart(2,'0');document.getElementById('clock').textContent=p(n.getDate())+'/'+p(n.getMonth()+1)+'/'+n.getFullYear()+' '+p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());}
+tick();setInterval(tick,1000);
+</script>
+</body>
+</html>
