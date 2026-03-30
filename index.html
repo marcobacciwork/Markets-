@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MARKETPULSE — Live Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#080b12; --surface:#0e1420; --border:#1c2538;
+      --accent:#3b82f6; --text:#f0f4ff; --text-muted:#4a5878; --text-dim:#8898bb;
+      --sw:230px;
+      --eq:#3b82f6; --cr:#a78bfa; --fx:#34d399; --co:#f59e0b;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;}
+    .topbar{position:fixed;top:0;left:0;right:0;height:52px;z-index:100;background:rgba(8,11,18,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 calc(var(--sw) + 20px);}
+    .logo{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+    .logo span{color:var(--accent);}
+    .live-badge{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:2px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);padding:4px 10px;border-radius:3px;}
+    .live-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:blink 1.4s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+    .clock{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);}
+    .sidebar{position:fixed;top:52px;left:0;bottom:0;width:var(--sw);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:90;padding:12px 0 40px;}
+    .sidebar::-webkit-scrollbar{width:3px;}
+    .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .nav-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;padding:10px 16px 4px;}
+    .nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-dim);transition:all .15s;border-left:2px solid transparent;user-select:none;}
+    .nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+    .nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+    .sub-item{display:flex;align-items:center;gap:8px;padding:6px 16px 6px 34px;cursor:pointer;font-size:12px;color:var(--text-muted);transition:all .15s;user-select:none;}
+    .sub-item:hover{color:var(--text-dim);background:rgba(255,255,255,.02);}
+    .nav-divider{height:1px;background:var(--border);margin:8px 12px;}
+    .main{margin-top:52px;margin-left:var(--sw);padding:20px 24px 60px;}
+    .ticker-wrap{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:28px;}
+    .section{margin-bottom:44px;}
+    .sh{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+    .sh-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .sh-title{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);}
+    .sh-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;}
+    .sh-line{flex:1;height:1px;background:var(--border);}
+    .subsection{margin-bottom:20px;}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+    .card:hover{border-color:#253050;box-shadow:0 4px 20px rgba(0,0,0,.35);}
+    .card-top{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
+    .card-name{font-size:13px;font-weight:600;color:var(--text);}
+    .card-ticker{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);margin-top:2px;}
+    .badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;}
+    .b-eq{background:rgba(59,130,246,.12);color:var(--eq);}
+    .b-cr{background:rgba(167,139,250,.12);color:var(--cr);}
+    .b-fx{background:rgba(52,211,153,.12);color:var(--fx);}
+    .b-co{background:rgba(245,158,11,.12);color:var(--co);}
+    /* Chart iframe */
+    .chart-frame{width:100%;height:240px;border:none;display:block;}
+    /* Placeholder shown before iframe loads */
+    .chart-placeholder{width:100%;height:240px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;}
+    footer{margin-left:var(--sw);padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+    footer p{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);}
+    footer a{color:var(--accent);text-decoration:none;}
+    @media(max-width:900px){:root{--sw:0px;}.sidebar{display:none;}.topbar{padding:0 16px;}.main{padding:14px;}.g2,.g3,.g4{grid-template-columns:1fr;}footer{margin-left:0;}}
+    @media(max-width:1200px){.g4{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:1050px){.g3{grid-template-columns:repeat(2,1fr);}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">MARKET<span>PULSE</span></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="clock" id="clock">—</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="nav-label">Mercati</div>
+  <div class="nav-item" style="--c:var(--eq)" onclick="goTo('sec-equity')"><div class="nav-dot" style="background:var(--eq)"></div>Azioni</div>
+  <div class="sub-item" onclick="goTo('sub-usa')">🇺🇸 USA</div>
+  <div class="sub-item" onclick="goTo('sub-eu')">🇪🇺 Europa</div>
+  <div class="nav-item" style="--c:var(--cr)" onclick="goTo('sec-crypto')"><div class="nav-dot" style="background:var(--cr)"></div>Crypto</div>
+  <div class="sub-item" onclick="goTo('sub-cr-top')">🔵 Top Crypto</div>
+  <div class="sub-item" onclick="goTo('sub-cr-alt')">🟣 Altcoin</div>
+  <div class="nav-item" style="--c:var(--fx)" onclick="goTo('sec-forex')"><div class="nav-dot" style="background:var(--fx)"></div>Forex</div>
+  <div class="nav-item" style="--c:var(--co)" onclick="goTo('sec-commodity')"><div class="nav-dot" style="background:var(--co)"></div>Commodities</div>
+  <div class="sub-item" onclick="goTo('sub-metalli')">🥇 Metalli</div>
+  <div class="sub-item" onclick="goTo('sub-energia')">🛢️ Energia</div>
+</div>
+
+<div class="main">
+
+  <!-- TICKER -->
+  <div class="ticker-wrap">
+    <div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+    {"symbols":[{"proName":"FOREXCOM:SPXUSD","title":"S&P 500"},{"proName":"FOREXCOM:NSXUSD","title":"Nasdaq"},{"proName":"FOREXCOM:DJI","title":"Dow Jones"},{"proName":"INDEX:DEU40","title":"DAX"},{"proName":"BITSTAMP:BTCUSD","title":"Bitcoin"},{"proName":"BITSTAMP:ETHUSD","title":"Ethereum"},{"proName":"TVC:GOLD","title":"Oro"},{"proName":"TVC:SILVER","title":"Argento"},{"proName":"TVC:USOIL","title":"WTI"},{"proName":"FX:EURUSD","title":"EUR/USD"},{"proName":"FX:GBPUSD","title":"GBP/USD"}],"showSymbolLogo":false,"isTransparent":true,"displayMode":"adaptive","colorTheme":"dark","locale":"it"}
+    </script></div>
+  </div>
+
+  <!-- AZIONI -->
+  <div class="section" id="sec-equity">
+    <div class="sh"><div class="sh-dot" style="background:var(--eq)"></div><div class="sh-title">Azioni</div><div class="sh-line"></div></div>
+    <div class="subsection" id="sub-usa">
+      <div class="sh"><span>🇺🇸</span><div class="sh-sub">USA</div><div class="sh-line"></div></div>
+      <div class="g3">
+        <div class="card"><div class="card-top"><div><div class="card-name">S&P 500</div><div class="card-ticker">FOREXCOM:SPXUSD</div></div><span class="badge b-eq">Equity</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=sp500&symbol=FOREXCOM%3ASPXUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%233b82f6&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Nasdaq 100</div><div class="card-ticker">FOREXCOM:NSXUSD</div></div><span class="badge b-eq">Equity</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=nasdaq&symbol=FOREXCOM%3ANSXUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%233b82f6&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Dow Jones</div><div class="card-ticker">FOREXCOM:DJI</div></div><span class="badge b-eq">Equity</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=dji&symbol=FOREXCOM%3ADJI&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%233b82f6&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+    <div class="subsection" id="sub-eu">
+      <div class="sh"><span>🇪🇺</span><div class="sh-sub">EUROPA</div><div class="sh-line"></div></div>
+      <div class="g2">
+        <div class="card"><div class="card-top"><div><div class="card-name">DAX</div><div class="card-ticker">INDEX:DEU40</div></div><span class="badge b-eq">Equity</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=dax&symbol=INDEX%3ADEU40&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%233b82f6&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">FTSE 100</div><div class="card-ticker">SPREADEX:FTSE</div></div><span class="badge b-eq">Equity</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=ftse&symbol=SPREADEX%3AFTSE&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%233b82f6&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRYPTO -->
+  <div class="section" id="sec-crypto">
+    <div class="sh"><div class="sh-dot" style="background:var(--cr)"></div><div class="sh-title">Crypto</div><div class="sh-line"></div></div>
+    <div class="subsection" id="sub-cr-top">
+      <div class="sh"><span>🔵</span><div class="sh-sub">TOP CRYPTO</div><div class="sh-line"></div></div>
+      <div class="g3">
+        <div class="card"><div class="card-top"><div><div class="card-name">Bitcoin</div><div class="card-ticker">BITSTAMP:BTCUSD</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=btc&symbol=BITSTAMP%3ABTCUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Ethereum</div><div class="card-ticker">BITSTAMP:ETHUSD</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=eth&symbol=BITSTAMP%3AETHUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Solana</div><div class="card-ticker">BINANCE:SOLUSDT</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=sol&symbol=BINANCE%3ASOLUSDT&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">XRP</div><div class="card-ticker">BITSTAMP:XRPUSD</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=xrp&symbol=BITSTAMP%3AXRPUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">BNB</div><div class="card-ticker">BINANCE:BNBUSDT</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=bnb&symbol=BINANCE%3ABNBUSDT&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+    <div class="subsection" id="sub-cr-alt">
+      <div class="sh"><span>🟣</span><div class="sh-sub">ALTCOIN</div><div class="sh-line"></div></div>
+      <div class="g3">
+        <div class="card"><div class="card-top"><div><div class="card-name">Avalanche</div><div class="card-ticker">BINANCE:AVAXUSDT</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=avax&symbol=BINANCE%3AAVAXUSDT&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Chainlink</div><div class="card-ticker">BINANCE:LINKUSDT</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=link&symbol=BINANCE%3ALINKUSDT&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Dogecoin</div><div class="card-ticker">BINANCE:DOGEUSDT</div></div><span class="badge b-cr">Crypto</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=doge&symbol=BINANCE%3ADOGEUSDT&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23a78bfa&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOREX -->
+  <div class="section" id="sec-forex">
+    <div class="sh"><div class="sh-dot" style="background:var(--fx)"></div><div class="sh-title">Forex</div><div class="sh-line"></div></div>
+    <div class="g4">
+      <div class="card"><div class="card-top"><div><div class="card-name">EUR / USD</div><div class="card-ticker">FX:EURUSD</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=eurusd&symbol=FX%3AEURUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+      <div class="card"><div class="card-top"><div><div class="card-name">GBP / USD</div><div class="card-ticker">FX:GBPUSD</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=gbpusd&symbol=FX%3AGBPUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+      <div class="card"><div class="card-top"><div><div class="card-name">USD / JPY</div><div class="card-ticker">FX:USDJPY</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=usdjpy&symbol=FX%3AUSDJPY&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+      <div class="card"><div class="card-top"><div><div class="card-name">USD / CHF</div><div class="card-ticker">FX:USDCHF</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=usdchf&symbol=FX%3AUSDCHF&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+      <div class="card"><div class="card-top"><div><div class="card-name">USD / CAD</div><div class="card-ticker">FX:USDCAD</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=usdcad&symbol=FX%3AUSDCAD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+      <div class="card"><div class="card-top"><div><div class="card-name">AUD / USD</div><div class="card-ticker">FX:AUDUSD</div></div><span class="badge b-fx">Forex</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=audusd&symbol=FX%3AAUDUSD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%2334d399&allow_symbol_change=0&save_image=0"></iframe></div>
+    </div>
+  </div>
+
+  <!-- COMMODITIES -->
+  <div class="section" id="sec-commodity">
+    <div class="sh"><div class="sh-dot" style="background:var(--co)"></div><div class="sh-title">Commodities</div><div class="sh-line"></div></div>
+    <div class="subsection" id="sub-metalli">
+      <div class="sh"><span>🥇</span><div class="sh-sub">METALLI</div><div class="sh-line"></div></div>
+      <div class="g2">
+        <div class="card"><div class="card-top"><div><div class="card-name">Oro</div><div class="card-ticker">TVC:GOLD</div></div><span class="badge b-co">Metal</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=gold&symbol=TVC%3AGOLD&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23f59e0b&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Argento</div><div class="card-ticker">TVC:SILVER</div></div><span class="badge b-co">Metal</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=silver&symbol=TVC%3ASILVER&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23f59e0b&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+    <div class="subsection" id="sub-energia">
+      <div class="sh"><span>🛢️</span><div class="sh-sub">ENERGIA</div><div class="sh-line"></div></div>
+      <div class="g2">
+        <div class="card"><div class="card-top"><div><div class="card-name">Petrolio WTI</div><div class="card-ticker">TVC:USOIL</div></div><span class="badge b-co">Energy</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=wti&symbol=TVC%3AUSOIL&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23f59e0b&allow_symbol_change=0&save_image=0"></iframe></div>
+        <div class="card"><div class="card-top"><div><div class="card-name">Petrolio Brent</div><div class="card-ticker">TVC:UKOIL</div></div><span class="badge b-co">Energy</span></div><iframe class="chart-frame" loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=brent&symbol=TVC%3AUKOIL&interval=D&theme=dark&style=3&locale=it&backgroundColor=rgba(14,20,32,1)&gridColor=rgba(28,37,56,1)&hide_top_toolbar=1&hide_legend=1&hide_volume=1&lineColor=%23f59e0b&allow_symbol_change=0&save_image=0"></iframe></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2025 MARKETPULSE — dati real-time via <a href="https://tradingview.com" target="_blank">TradingView</a></p>
+  <p>NON È CONSULENZA FINANZIARIA</p>
+</footer>
+
+<script>
+function goTo(id) {
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function tick() {
+  const now = new Date(), p = n=>String(n).padStart(2,'0');
+  document.getElementById('clock').textContent = p(now.getDate())+'/'+p(now.getMonth()+1)+'/'+now.getFullYear()+' '+p(now.getHours())+':'+p(now.getMinutes())+':'+p(now.getSeconds());
+}
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
